@@ -241,29 +241,31 @@ def extract_attributes(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are a helpful assistant that extracts entity properties from the provided text.',
+            content='你是一个有用的助手，负责从提供的文本中提取实体属性。请不要转义unicode字符。\n\n提取的任何信息都应该以与写入时相同的语言返回。',
         ),
         Message(
             role='user',
             content=f"""
 
-        <MESSAGES>
+        <消息内容>
         {json.dumps(context['previous_episodes'], indent=2)}
         {json.dumps(context['episode_content'], indent=2)}
-        </MESSAGES>
+        </消息内容>
 
-        Given the above MESSAGES and the following ENTITY, update any of its attributes based on the information provided
-        in MESSAGES. Use the provided attribute descriptions to better understand how each attribute should be determined.
+        根据上述消息内容和以下实体，基于消息中提供的信息更新实体的任何属性。
+        使用提供的属性描述来更好地理解每个属性应该如何确定。
 
-        Guidelines:
-        1. Do not hallucinate entity property values if they cannot be found in the current context.
-        2. Only use the provided MESSAGES and ENTITY to set attribute values.
-        3. The summary attribute represents a summary of the ENTITY, and should be updated with new information about the Entity from the MESSAGES. 
-            Summaries must be no longer than 250 words.
+        指导原则：
+        1. 如果在当前上下文中找不到实体属性值，不要编造实体属性值。
+        2. 仅使用提供的消息内容和实体来设置属性值。
+        3. summary（摘要）属性代表实体的摘要，应该根据消息中关于该实体的新信息进行更新。
+           摘要不得超过250个字。
         
-        <ENTITY>
+        <实体>
         {context['node']}
-        </ENTITY>
+        </实体>
+        
+        请确保你的回答是有效的JSON格式。
         """,
         ),
     ]
