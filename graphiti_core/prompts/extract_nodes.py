@@ -23,32 +23,31 @@ from .models import Message, PromptFunction, PromptVersion
 
 
 class ExtractedEntity(BaseModel):
-    name: str = Field(..., description='Name of the extracted entity')
+    name: str = Field(..., description='提取的实体名称')
     entity_type_id: int = Field(
-        description='ID of the classified entity type. '
-        'Must be one of the provided entity_type_id integers.',
+        description='分类的实体类型ID。必须是提供的entity_type_id整数之一。',
     )
 
 
 class ExtractedEntities(BaseModel):
-    extracted_entities: list[ExtractedEntity] = Field(..., description='List of extracted entities')
+    extracted_entities: list[ExtractedEntity] = Field(..., description='提取的实体列表')
 
 
 class MissedEntities(BaseModel):
-    missed_entities: list[str] = Field(..., description="Names of entities that weren't extracted")
+    missed_entities: list[str] = Field(..., description="未被提取的实体名称")
 
 
 class EntityClassificationTriple(BaseModel):
-    uuid: str = Field(description='UUID of the entity')
-    name: str = Field(description='Name of the entity')
+    uuid: str = Field(description='实体的UUID')
+    name: str = Field(description='实体名称')
     entity_type: str | None = Field(
-        default=None, description='Type of the entity. Must be one of the provided types or None'
+        default=None, description='实体类型。必须是提供的类型之一或None'
     )
 
 
 class EntityClassification(BaseModel):
     entity_classifications: list[EntityClassificationTriple] = Field(
-        ..., description='List of entities classification triples.'
+        ..., description='实体分类三元组列表。'
     )
 
 
@@ -71,26 +70,26 @@ class Versions(TypedDict):
 
 
 def extract_message(context: dict[str, Any]) -> list[Message]:
-    sys_prompt = """You are an AI assistant that extracts entity nodes from conversational messages. 
-    Your primary task is to extract and classify the speaker and other significant entities mentioned in the conversation."""
+    sys_prompt = """你是一个从对话消息中提取实体节点的AI助手。
+    你的主要任务是提取和分类说话者以及对话中提到的其他重要实体。"""
 
     user_prompt = f"""
-<ENTITY TYPES>
+<实体类型>
 {context['entity_types']}
-</ENTITY TYPES>
+</实体类型>
 
-<PREVIOUS MESSAGES>
+<历史消息>
 {json.dumps([ep for ep in context['previous_episodes']], indent=2)}
-</PREVIOUS MESSAGES>
+</历史消息>
 
-<CURRENT MESSAGE>
+<当前消息>
 {context['episode_content']}
-</CURRENT MESSAGE>
+</当前消息>
 
 指令:
 
 给定对话上下文和当前消息，你的任务是提取当前消息中**显式或隐式**提及的**实体节点**。
-代词引用如he/she/they或this/that/those应该被消歧到引用实体的名称。
+代词引用如他/她/他们或这/那/那些应该被消歧到引用实体的名称。
 
 1. **说话者提取**: 始终提取说话者（每个对话行中冒号 `:` 前面的部分）作为第一个实体节点。
    - 如果说话者在消息中再次被提及，将两次提及视为**单个实体**。
@@ -119,30 +118,30 @@ def extract_message(context: dict[str, Any]) -> list[Message]:
 
 
 def extract_json(context: dict[str, Any]) -> list[Message]:
-    sys_prompt = """You are an AI assistant that extracts entity nodes from JSON. 
-    Your primary task is to extract and classify relevant entities from JSON files"""
+    sys_prompt = """你是一个从JSON中提取实体节点的AI助手。
+    你的主要任务是从JSON文件中提取和分类相关实体。"""
 
     user_prompt = f"""
-<ENTITY TYPES>
+<实体类型>
 {context['entity_types']}
-</ENTITY TYPES>
+</实体类型>
 
-<SOURCE DESCRIPTION>:
+<源描述>:
 {context['source_description']}
-</SOURCE DESCRIPTION>
+</源描述>
 <JSON>
 {context['episode_content']}
 </JSON>
 
 {context['custom_prompt']}
 
-Given the above source description and JSON, extract relevant entities from the provided JSON.
-For each entity extracted, also determine its entity type based on the provided ENTITY TYPES and their descriptions.
-Indicate the classified entity type by providing its entity_type_id.
+给定上述源描述和JSON，从提供的JSON中提取相关实体。
+对于每个提取的实体，还要根据提供的实体类型及其描述确定其实体类型。
+通过提供其entity_type_id来指示分类的实体类型。
 
-Guidelines:
-1. Always try to extract an entities that the JSON represents. This will often be something like a "name" or "user field
-2. Do NOT extract any properties that contain dates
+指导原则：
+1. 始终尝试提取JSON代表的实体。这通常是像"name"或"user"字段这样的内容
+2. 不要提取任何包含日期的属性
 """
     return [
         Message(role='system', content=sys_prompt),
@@ -151,29 +150,29 @@ Guidelines:
 
 
 def extract_text(context: dict[str, Any]) -> list[Message]:
-    sys_prompt = """You are an AI assistant that extracts entity nodes from text. 
-    Your primary task is to extract and classify the speaker and other significant entities mentioned in the provided text."""
+    sys_prompt = """你是一个从文本中提取实体节点的AI助手。
+    你的主要任务是提取和分类说话者以及提供文本中提到的其他重要实体。"""
 
     user_prompt = f"""
-<ENTITY TYPES>
+<实体类型>
 {context['entity_types']}
-</ENTITY TYPES>
+</实体类型>
 
-<TEXT>
+<文本>
 {context['episode_content']}
-</TEXT>
+</文本>
 
-Given the above text, extract entities from the TEXT that are explicitly or implicitly mentioned.
-For each entity extracted, also determine its entity type based on the provided ENTITY TYPES and their descriptions.
-Indicate the classified entity type by providing its entity_type_id.
+给定上述文本，从文本中提取显式或隐式提及的实体。
+对于每个提取的实体，还要根据提供的实体类型及其描述确定其实体类型。
+通过提供其entity_type_id来指示分类的实体类型。
 
 {context['custom_prompt']}
 
-Guidelines:
-1. Extract significant entities, concepts, or actors mentioned in the conversation.
-2. Avoid creating nodes for relationships or actions.
-3. Avoid creating nodes for temporal information like dates, times or years (these will be added to edges later).
-4. Be as explicit as possible in your node names, using full names and avoiding abbreviations.
+指导原则：
+1. 提取对话中提到的重要实体、概念或参与者。
+2. 避免为关系或行为创建节点。
+3. 避免为时间信息（如日期、时间或年份）创建节点（这些将稍后添加到边中）。
+4. 在节点名称中尽可能明确，使用全名并避免缩写。
 """
     return [
         Message(role='system', content=sys_prompt),
@@ -182,22 +181,21 @@ Guidelines:
 
 
 def reflexion(context: dict[str, Any]) -> list[Message]:
-    sys_prompt = """You are an AI assistant that determines which entities have not been extracted from the given context"""
+    sys_prompt = """你是一个确定给定上下文中哪些实体未被提取的AI助手"""
 
     user_prompt = f"""
-<PREVIOUS MESSAGES>
+<历史消息>
 {json.dumps([ep for ep in context['previous_episodes']], indent=2)}
-</PREVIOUS MESSAGES>
-<CURRENT MESSAGE>
+</历史消息>
+<当前消息>
 {context['episode_content']}
-</CURRENT MESSAGE>
+</当前消息>
 
-<EXTRACTED ENTITIES>
+<已提取实体>
 {context['extracted_entities']}
-</EXTRACTED ENTITIES>
+</已提取实体>
 
-Given the above previous messages, current message, and list of extracted entities; determine if any entities haven't been
-extracted.
+给定上述历史消息、当前消息和已提取实体列表；确定是否有任何实体未被提取。
 """
     return [
         Message(role='system', content=sys_prompt),
@@ -206,30 +204,30 @@ extracted.
 
 
 def classify_nodes(context: dict[str, Any]) -> list[Message]:
-    sys_prompt = """You are an AI assistant that classifies entity nodes given the context from which they were extracted"""
+    sys_prompt = """你是一个根据提取实体节点的上下文对实体节点进行分类的AI助手"""
 
     user_prompt = f"""
-    <PREVIOUS MESSAGES>
+    <历史消息>
     {json.dumps([ep for ep in context['previous_episodes']], indent=2)}
-    </PREVIOUS MESSAGES>
-    <CURRENT MESSAGE>
+    </历史消息>
+    <当前消息>
     {context['episode_content']}
-    </CURRENT MESSAGE>
+    </当前消息>
     
-    <EXTRACTED ENTITIES>
+    <已提取实体>
     {context['extracted_entities']}
-    </EXTRACTED ENTITIES>
+    </已提取实体>
     
-    <ENTITY TYPES>
+    <实体类型>
     {context['entity_types']}
-    </ENTITY TYPES>
+    </实体类型>
     
-    Given the above conversation, extracted entities, and provided entity types and their descriptions, classify the extracted entities.
+    给定上述对话、已提取实体和提供的实体类型及其描述，对已提取的实体进行分类。
     
-    Guidelines:
-    1. Each entity must have exactly one type
-    2. Only use the provided ENTITY TYPES as types, do not use additional types to classify entities.
-    3. If none of the provided entity types accurately classify an extracted node, the type should be set to None
+    指导原则：
+    1. 每个实体必须有且仅有一个类型
+    2. 只使用提供的实体类型作为类型，不要使用其他类型来分类实体。
+    3. 如果提供的实体类型都不能准确分类已提取的节点，则类型应设置为None
 """
     return [
         Message(role='system', content=sys_prompt),
@@ -247,25 +245,23 @@ def extract_attributes(context: dict[str, Any]) -> list[Message]:
             role='user',
             content=f"""
 
-        <消息内容>
+        <消息>
         {json.dumps(context['previous_episodes'], indent=2)}
         {json.dumps(context['episode_content'], indent=2)}
-        </消息内容>
+        </消息>
 
-        根据上述消息内容和以下实体，基于消息中提供的信息更新实体的任何属性。
+        根据上述消息和以下实体，基于消息中提供的信息更新实体的任何属性。
         使用提供的属性描述来更好地理解每个属性应该如何确定。
 
         指导原则：
         1. 如果在当前上下文中找不到实体属性值，不要编造实体属性值。
-        2. 仅使用提供的消息内容和实体来设置属性值。
+        2. 仅使用提供的消息和实体来设置属性值。
         3. summary（摘要）属性代表实体的摘要，应该根据消息中关于该实体的新信息进行更新。
            摘要不得超过250个字。
         
         <实体>
         {context['node']}
         </实体>
-        
-        请确保你的回答是有效的JSON格式。
         """,
         ),
     ]

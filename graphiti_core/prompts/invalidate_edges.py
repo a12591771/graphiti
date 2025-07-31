@@ -24,7 +24,7 @@ from .models import Message, PromptFunction, PromptVersion
 class InvalidatedEdges(BaseModel):
     contradicted_facts: list[int] = Field(
         ...,
-        description='List of ids of facts that should be invalidated. If no facts should be invalidated, the list should be empty.',
+        description='应该被无效化的事实ID列表。如果没有事实应该被无效化，列表应该为空。',
     )
 
 
@@ -42,29 +42,29 @@ def v1(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are an AI assistant that helps determine which relationships in a knowledge graph should be invalidated based solely on explicit contradictions in newer information.',
+            content='你是一个AI助手，帮助确定知识图中的哪些关系应该仅基于较新信息中的明确矛盾而被无效化。',
         ),
         Message(
             role='user',
             content=f"""
-               Based on the provided existing edges and new edges with their timestamps, determine which relationships, if any, should be marked as expired due to contradictions or updates in the newer edges.
-               Use the start and end dates of the edges to determine which edges are to be marked expired.
-                Only mark a relationship as invalid if there is clear evidence from other edges that the relationship is no longer true.
-                Do not invalidate relationships merely because they weren't mentioned in the episodes. You may use the current episode and previous episodes as well as the facts of each edge to understand the context of the relationships.
+               基于提供的现有边和新边及其时间戳，确定哪些关系（如果有）应该由于较新边中的矛盾或更新而被标记为过期。
+               使用边的开始和结束日期来确定哪些边要被标记为过期。
+                只有在有明确证据表明关系不再为真时，才将关系标记为无效。
+                不要仅仅因为关系在剧集中没有提到就无效化关系。你可以使用当前剧集和之前的剧集以及每个边的事实来理解关系的上下文。
 
-                Previous Episodes:
+                历史剧集：
                 {context['previous_episodes']}
 
-                Current Episode:
+                当前剧集：
                 {context['current_episode']}
 
-                Existing Edges (sorted by timestamp, newest first):
+                现有边（按时间戳排序，最新的在前）：
                 {context['existing_edges']}
 
-                New Edges:
+                新边：
                 {context['new_edges']}
 
-                Each edge is formatted as: "UUID | SOURCE_NODE - EDGE_NAME - TARGET_NODE (fact: EDGE_FACT), START_DATE (END_DATE, optional))"
+                每个边格式为："UUID | 源节点 - 边名称 - 目标节点（事实：边事实），开始日期（结束日期，可选）)"
             """,
         ),
     ]
@@ -74,22 +74,22 @@ def v2(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are an AI assistant that determines which facts contradict each other.',
+            content='你是一个确定哪些事实相互矛盾的AI助手。',
         ),
         Message(
             role='user',
             content=f"""
-               Based on the provided EXISTING FACTS and a NEW FACT, determine which existing facts the new fact contradicts.
-               Return a list containing all ids of the facts that are contradicted by the NEW FACT.
-               If there are no contradicted facts, return an empty list.
+               基于提供的现有事实和新事实，确定新事实与哪些现有事实矛盾。
+               返回包含新事实矛盾的所有事实ID的列表。
+               如果没有矛盾的事实，返回空列表。
 
-                <EXISTING FACTS>
+                <现有事实>
                 {context['existing_edges']}
-                </EXISTING FACTS>
+                </现有事实>
 
-                <NEW FACT>
+                <新事实>
                 {context['new_edge']}
-                </NEW FACT>
+                </新事实>
             """,
         ),
     ]

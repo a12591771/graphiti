@@ -23,27 +23,27 @@ from .models import Message, PromptFunction, PromptVersion
 
 
 class QueryExpansion(BaseModel):
-    query: str = Field(..., description='为数据库搜索优化的查询')
+    query: str = Field(..., description='query optimized for database search')
 
 
 class QAResponse(BaseModel):
-    ANSWER: str = Field(..., description='Alice会如何回答问题')
+    ANSWER: str = Field(..., description='how Alice would answer the question')
 
 
 class EvalResponse(BaseModel):
-    is_correct: bool = Field(..., description='答案是否正确或不正确的布尔值')
+    is_correct: bool = Field(..., description='boolean if the answer is correct or incorrect')
     reasoning: str = Field(
-        ..., description='你为什么确定响应是正确或不正确的'
+        ..., description='why you determined the response was correct or incorrect'
     )
 
 
 class EvalAddEpisodeResults(BaseModel):
     candidate_is_worse: bool = Field(
         ...,
-        description='基线提取是否比候选提取质量更高的布尔值。',
+        description='boolean if the baseline extraction is higher quality than the candidate extraction.',
     )
     reasoning: str = Field(
-        ..., description='你为什么确定响应是正确或不正确的'
+        ..., description='why you determined the response was correct or incorrect'
     )
 
 
@@ -62,14 +62,14 @@ class Versions(TypedDict):
 
 
 def query_expansion(context: dict[str, Any]) -> list[Message]:
-    sys_prompt = """你是一个将问题重新表述为数据库检索系统中使用的查询的专家"""
+    sys_prompt = """You are an expert at rephrasing questions into queries used in a database retrieval system"""
 
     user_prompt = f"""
-    Bob向Alice提问，你能将问题重新表述为一个关于Alice的第三人称的更简单的问题
-    并保持相关上下文吗？
-    <问题>
+    Bob is asking Alice a question, are you able to rephrase the question into a simpler one about Alice in the third person
+    that maintains the relevant context?
+    <QUESTION>
     {json.dumps(context['query'])}
-    </问题>
+    </QUESTION>
     """
     return [
         Message(role='system', content=sys_prompt),
@@ -78,20 +78,20 @@ def query_expansion(context: dict[str, Any]) -> list[Message]:
 
 
 def qa_prompt(context: dict[str, Any]) -> list[Message]:
-    sys_prompt = """你是Alice，应该从Alice的第一人称视角回答所有问题"""
+    sys_prompt = """You are Alice and should respond to all questions from the first person perspective of Alice"""
 
     user_prompt = f"""
-    你的任务是以你认为Alice会回答问题的方式简要回答问题。
-    你得到以下实体摘要和事实来帮助你确定问题的答案。
-    <实体摘要>
+    Your task is to briefly answer the question in the way that you think Alice would answer the question.
+    You are given the following entity summaries and facts to help you determine the answer to your question.
+    <ENTITY_SUMMARIES>
     {json.dumps(context['entity_summaries'])}
-    </实体摘要>
-    <事实>
+    </ENTITY_SUMMARIES>
+    <FACTS>
     {json.dumps(context['facts'])}
-    </事实>
-    <问题>
+    </FACTS>
+    <QUESTION>
     {context['query']}
-    </问题>
+    </QUESTION>
     """
     return [
         Message(role='system', content=sys_prompt),
@@ -101,21 +101,22 @@ def qa_prompt(context: dict[str, Any]) -> list[Message]:
 
 def eval_prompt(context: dict[str, Any]) -> list[Message]:
     sys_prompt = (
-        """你是一个确定问题答案是否匹配金标准答案的裁判"""
+        """You are a judge that determines if answers to questions match a gold standard answer"""
     )
 
     user_prompt = f"""
-    给定问题和金标准答案，确定对问题的响应是正确还是不正确。
-    虽然响应可能更冗长，但只要它引用与金标准答案相同的主题，就将其标记为正确。也包括你评分的理由。
-    <问题>
+    Given the QUESTION and the gold standard ANSWER determine if the RESPONSE to the question is correct or incorrect.
+    Although the RESPONSE may be more verbose, mark it as correct as long as it references the same topic 
+    as the gold standard ANSWER. Also include your reasoning for the grade.
+    <QUESTION>
     {context['query']}
-    </问题>
-    <答案>
+    </QUESTION>
+    <ANSWER>
     {context['answer']}
-    </答案>
-    <响应>
+    </ANSWER>
+    <RESPONSE>
     {context['response']}
-    </响应>
+    </RESPONSE>
     """
     return [
         Message(role='system', content=sys_prompt),
@@ -124,27 +125,30 @@ def eval_prompt(context: dict[str, Any]) -> list[Message]:
 
 
 def eval_add_episode_results(context: dict[str, Any]) -> list[Message]:
-    sys_prompt = """你是一个确定基于相同消息的基线图构建结果是否比候选图构建结果更好的裁判。"""
+    sys_prompt = """You are a judge that determines whether a baseline graph building result from a list of messages is better
+        than a candidate graph building result based on the same messages."""
 
     user_prompt = f"""
-    给定以下历史消息和消息，确定从对话中提取的基线图数据是否比从对话中提取的候选图数据质量更高。
+    Given the following PREVIOUS MESSAGES and MESSAGE, determine if the BASELINE graph data extracted from the 
+    conversation is higher quality than the CANDIDATE graph data extracted from the conversation.
     
-    如果基线提取更好，返回False，否则返回True。如果候选提取和基线提取在质量上几乎相同，返回True。在reasoning字段中添加你决定的理由
+    Return False if the BASELINE extraction is better, and True otherwise. If the CANDIDATE extraction and
+    BASELINE extraction are nearly identical in quality, return True. Add your reasoning for your decision to the reasoning field
     
-    <历史消息>
+    <PREVIOUS MESSAGES>
     {context['previous_messages']}
-    </历史消息>
-    <消息>
+    </PREVIOUS MESSAGES>
+    <MESSAGE>
     {context['message']}
-    </消息>
+    </MESSAGE>
     
-    <基线>
+    <BASELINE>
     {context['baseline']}
-    </基线>
+    </BASELINE>
     
-    <候选>
+    <CANDIDATE>
     {context['candidate']}
-    </候选>
+    </CANDIDATE>
     """
     return [
         Message(role='system', content=sys_prompt),

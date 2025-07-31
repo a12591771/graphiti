@@ -23,23 +23,23 @@ from .models import Message, PromptFunction, PromptVersion
 
 
 class NodeDuplicate(BaseModel):
-    id: int = Field(..., description='integer id of the entity')
+    id: int = Field(..., description='实体的整数ID')
     duplicate_idx: int = Field(
         ...,
-        description='idx of the duplicate entity. If no duplicate entities are found, default to -1.',
+        description='重复实体的索引。如果没有找到重复实体，默认为-1。',
     )
     name: str = Field(
         ...,
-        description='Name of the entity. Should be the most complete and descriptive name of the entity. Do not include any JSON formatting in the Entity name such as {}.',
+        description='实体名称。应该是实体最完整和描述性的名称。不要在实体名称中包含任何JSON格式（如{}）。',
     )
     duplicates: list[int] = Field(
         ...,
-        description='idx of all entities that are a duplicate of the entity with the above id.',
+        description='与上述ID实体重复的所有实体的索引。',
     )
 
 
 class NodeResolutions(BaseModel):
-    entity_resolutions: list[NodeDuplicate] = Field(..., description='List of resolved nodes')
+    entity_resolutions: list[NodeDuplicate] = Field(..., description='已解析节点列表')
 
 
 class Prompt(Protocol):
@@ -58,46 +58,44 @@ def node(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are a helpful assistant that determines whether or not a NEW ENTITY is a duplicate of any EXISTING ENTITIES.',
+            content='你是一个有用的助手，确定新实体是否是任何现有实体的重复。',
         ),
         Message(
             role='user',
             content=f"""
-        <PREVIOUS MESSAGES>
+        <历史消息>
         {json.dumps([ep for ep in context['previous_episodes']], indent=2)}
-        </PREVIOUS MESSAGES>
-        <CURRENT MESSAGE>
+        </历史消息>
+        <当前消息>
         {context['episode_content']}
-        </CURRENT MESSAGE>
-        <NEW ENTITY>
+        </当前消息>
+        <新实体>
         {json.dumps(context['extracted_node'], indent=2)}
-        </NEW ENTITY>
-        <ENTITY TYPE DESCRIPTION>
+        </新实体>
+        <实体类型描述>
         {json.dumps(context['entity_type_description'], indent=2)}
-        </ENTITY TYPE DESCRIPTION>
+        </实体类型描述>
 
-        <EXISTING ENTITIES>
+        <现有实体>
         {json.dumps(context['existing_nodes'], indent=2)}
-        </EXISTING ENTITIES>
+        </现有实体>
         
-        Given the above EXISTING ENTITIES and their attributes, MESSAGE, and PREVIOUS MESSAGES; Determine if the NEW ENTITY extracted from the conversation
-        is a duplicate entity of one of the EXISTING ENTITIES.
+        给定上述现有实体及其属性、消息和历史消息；确定从对话中提取的新实体是否是现有实体之一的重复实体。
         
-        Entities should only be considered duplicates if they refer to the *same real-world object or concept*.
-        Semantic Equivalence: if a descriptive label in existing_entities clearly refers to a named entity in context, treat them as duplicates.
+        只有当实体指向*相同的现实世界对象或概念*时，才应该被认为是重复的。
+        语义等价：如果existing_entities中的描述性标签明确指向上下文中的命名实体，则将它们视为重复。
 
-        Do NOT mark entities as duplicates if:
-        - They are related but distinct.
-        - They have similar names or purposes but refer to separate instances or concepts.
+        不要将实体标记为重复，如果：
+        - 它们相关但不同。
+        - 它们有相似的名称或目的，但指向不同的实例或概念。
 
-         TASK:
-         1. Compare `new_entity` against each item in `existing_entities`.
-         2. If it refers to the same real‐world object or concept, collect its index.
-         3. Let `duplicate_idx` = the *first* collected index, or –1 if none.
-         4. Let `duplicates` = the list of *all* collected indices (empty list if none).
+         任务：
+         1. 将`new_entity`与`existing_entities`中的每个项目进行比较。
+         2. 如果它指向相同的现实世界对象或概念，收集其索引。
+         3. 设`duplicate_idx` = 第一个收集的索引，如果没有则为-1。
+         4. 设`duplicates` = 所有收集索引的列表（如果没有则为空列表）。
         
-        Also return the full name of the NEW ENTITY (whether it is the name of the NEW ENTITY, a node it
-        is a duplicate of, or a combination of the two).
+        还要返回新实体的全名（无论它是新实体的名称、它重复的节点的名称，还是两者的组合）。
         """,
         ),
     ]
@@ -107,62 +105,59 @@ def nodes(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are a helpful assistant that determines whether or not ENTITIES extracted from a conversation are duplicates'
-            'of existing entities.',
+            content='你是一个有用的助手，确定从对话中提取的实体是否是现有实体的重复。',
         ),
         Message(
             role='user',
             content=f"""
-        <PREVIOUS MESSAGES>
+        <历史消息>
         {json.dumps([ep for ep in context['previous_episodes']], indent=2)}
-        </PREVIOUS MESSAGES>
-        <CURRENT MESSAGE>
+        </历史消息>
+        <当前消息>
         {context['episode_content']}
-        </CURRENT MESSAGE>
+        </当前消息>
         
         
-        Each of the following ENTITIES were extracted from the CURRENT MESSAGE.
-        Each entity in ENTITIES is represented as a JSON object with the following structure:
+        以下每个实体都是从当前消息中提取的。
+        实体中的每个实体都表示为具有以下结构的JSON对象：
         {{
-            id: integer id of the entity,
-            name: "name of the entity",
-            entity_type: "ontological classification of the entity",
-            entity_type_description: "Description of what the entity type represents",
+            id: 实体的整数ID,
+            name: "实体名称",
+            entity_type: "实体的本体分类",
+            entity_type_description: "实体类型代表什么的描述",
             duplication_candidates: [
                 {{
-                    idx: integer index of the candidate entity,
-                    name: "name of the candidate entity",
-                    entity_type: "ontological classification of the candidate entity",
-                    ...<additional attributes>
+                    idx: 候选实体的整数索引,
+                    name: "候选实体名称",
+                    entity_type: "候选实体的本体分类",
+                    ...<附加属性>
                 }}
             ]
         }}
         
-        <ENTITIES>
+        <实体>
         {json.dumps(context['extracted_nodes'], indent=2)}
-        </ENTITIES>
+        </实体>
         
-        <EXISTING ENTITIES>
+        <现有实体>
         {json.dumps(context['existing_nodes'], indent=2)}
-        </EXISTING ENTITIES>
+        </现有实体>
 
-        For each of the above ENTITIES, determine if the entity is a duplicate of any of the EXISTING ENTITIES.
+        对于上述每个实体，确定该实体是否是任何现有实体的重复。
 
-        Entities should only be considered duplicates if they refer to the *same real-world object or concept*.
+        只有当实体指向*相同的现实世界对象或概念*时，才应该被认为是重复的。
 
-        Do NOT mark entities as duplicates if:
-        - They are related but distinct.
-        - They have similar names or purposes but refer to separate instances or concepts.
+        不要将实体标记为重复，如果：
+        - 它们相关但不同。
+        - 它们有相似的名称或目的，但指向不同的实例或概念。
 
-        Task:
-        Your response will be a list called entity_resolutions which contains one entry for each entity.
+        任务：
+        你的响应将是一个名为entity_resolutions的列表，其中包含每个实体的一个条目。
         
-        For each entity, return the id of the entity as id, the name of the entity as name, and the duplicate_idx
-        as an integer.
+        对于每个实体，返回实体的ID作为id，实体的名称作为name，duplicate_idx作为整数，以及duplicates作为列表。
         
-        - If an entity is a duplicate of one of the EXISTING ENTITIES, return the idx of the candidate it is a 
-        duplicate of.
-        - If an entity is not a duplicate of one of the EXISTING ENTITIES, return the -1 as the duplication_idx
+        - 如果一个实体是现有实体之一的重复，返回它重复的候选的idx。
+        - 如果一个实体不是现有实体之一的重复，返回-1作为duplication_idx
         """,
         ),
     ]
@@ -172,31 +167,31 @@ def node_list(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are a helpful assistant that de-duplicates nodes from node lists.',
+            content='你是一个有用的助手，从节点列表中去重节点。',
         ),
         Message(
             role='user',
             content=f"""
-        Given the following context, deduplicate a list of nodes:
+        给定以下上下文，去重节点列表：
 
-        Nodes:
+        节点：
         {json.dumps(context['nodes'], indent=2)}
 
-        Task:
-        1. Group nodes together such that all duplicate nodes are in the same list of uuids
-        2. All duplicate uuids should be grouped together in the same list
-        3. Also return a new summary that synthesizes the summary into a new short summary
+        任务：
+        1. 将节点分组，使所有重复节点都在相同的uuid列表中
+        2. 所有重复的uuid应该组合在同一个列表中
+        3. 还要返回一个新的摘要，将摘要合成为一个新的简短摘要
 
-        Guidelines:
-        1. Each uuid from the list of nodes should appear EXACTLY once in your response
-        2. If a node has no duplicates, it should appear in the response in a list of only one uuid
+        指导原则：
+        1. 节点列表中的每个uuid在你的响应中应该恰好出现一次
+        2. 如果一个节点没有重复，它应该在响应中出现在只有一个uuid的列表中
 
-        Respond with a JSON object in the following format:
+        以以下格式的JSON对象响应：
         {{
             "nodes": [
                 {{
-                    "uuids": ["5d643020624c42fa9de13f97b1b3fa39", "node that is a duplicate of 5d643020624c42fa9de13f97b1b3fa39"],
-                    "summary": "Brief summary of the node summaries that appear in the list of names."
+                    "uuids": ["5d643020624c42fa9de13f97b1b3fa39", "与5d643020624c42fa9de13f97b1b3fa39重复的节点"],
+                    "summary": "出现在名称列表中的节点摘要的简要摘要。"
                 }}
             ]
         }}

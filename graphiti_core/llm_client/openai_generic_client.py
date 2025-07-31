@@ -107,7 +107,8 @@ class OpenAIGenericClient(LLMClient):
                 response_format={'type': 'json_object'},
             )
             result = response.choices[0].message.content or ''
-            return json.loads(result)
+            from .utils import safe_json_loads
+            return safe_json_loads(result)
         except openai.RateLimitError as e:
             raise RateLimitError from e
         except Exception as e:

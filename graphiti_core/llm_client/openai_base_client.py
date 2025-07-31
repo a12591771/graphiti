@@ -119,7 +119,8 @@ class BaseOpenAIClient(LLMClient):
     def _handle_json_response(self, response: Any) -> dict[str, Any]:
         """Handle JSON response parsing."""
         result = response.choices[0].message.content or '{}'
-        return json.loads(result)
+        from .utils import safe_json_loads
+        return safe_json_loads(result)
 
     async def _generate_response(
         self,

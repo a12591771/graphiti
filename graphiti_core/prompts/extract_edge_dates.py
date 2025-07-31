@@ -24,11 +24,11 @@ from .models import Message, PromptFunction, PromptVersion
 class EdgeDates(BaseModel):
     valid_at: str | None = Field(
         None,
-        description='The date and time when the relationship described by the edge fact became true or was established. YYYY-MM-DDTHH:MM:SS.SSSSSSZ or null.',
+        description='边事实描述的关系成立或建立的日期和时间。YYYY-MM-DDTHH:MM:SS.SSSSSSZ或null。',
     )
     invalid_at: str | None = Field(
         None,
-        description='The date and time when the relationship described by the edge fact stopped being true or ended. YYYY-MM-DDTHH:MM:SS.SSSSSSZ or null.',
+        description='边事实描述的关系停止为真或结束的日期和时间。YYYY-MM-DDTHH:MM:SS.SSSSSSZ或null。',
     )
 
 
@@ -44,45 +44,45 @@ def v1(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are an AI assistant that extracts datetime information for graph edges, focusing only on dates directly related to the establishment or change of the relationship described in the edge fact.',
+            content='你是一个为图边提取日期时间信息的AI助手，只关注与边事实中描述的关系建立或变化直接相关的日期。',
         ),
         Message(
             role='user',
             content=f"""
-            <PREVIOUS MESSAGES>
+            <历史消息>
             {context['previous_episodes']}
-            </PREVIOUS MESSAGES>
-            <CURRENT MESSAGE>
+            </历史消息>
+            <当前消息>
             {context['current_episode']}
-            </CURRENT MESSAGE>
-            <REFERENCE TIMESTAMP>
+            </当前消息>
+            <参考时间戳>
             {context['reference_timestamp']}
-            </REFERENCE TIMESTAMP>
+            </参考时间戳>
             
-            <FACT>
+            <事实>
             {context['edge_fact']}
-            </FACT>
+            </事实>
 
-            IMPORTANT: Only extract time information if it is part of the provided fact. Otherwise ignore the time mentioned. Make sure to do your best to determine the dates if only the relative time is mentioned. (eg 10 years ago, 2 mins ago) based on the provided reference timestamp
-            If the relationship is not of spanning nature, but you are still able to determine the dates, set the valid_at only.
-            Definitions:
-            - valid_at: The date and time when the relationship described by the edge fact became true or was established.
-            - invalid_at: The date and time when the relationship described by the edge fact stopped being true or ended.
+            重要：只有当时间信息是提供的事实的一部分时才提取时间信息。否则忽略提到的时间。确保尽力确定日期，如果只提到相对时间（例如10年前，2分钟前）基于提供的参考时间戳。
+            如果关系不是跨越性质的，但你仍然能够确定日期，只设置valid_at。
+            定义：
+            - valid_at：边事实描述的关系成立或建立的日期和时间。
+            - invalid_at：边事实描述的关系停止为真或结束的日期和时间。
 
-            Task:
-            Analyze the conversation and determine if there are dates that are part of the edge fact. Only set dates if they explicitly relate to the formation or alteration of the relationship itself.
+            任务：
+            分析对话并确定是否有作为边事实一部分的日期。只有当日期明确与关系本身的形成或改变相关时才设置日期。
 
-            Guidelines:
-            1. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS.SSSSSSZ) for datetimes.
-            2. Use the reference timestamp as the current time when determining the valid_at and invalid_at dates.
-            3. If the fact is written in the present tense, use the Reference Timestamp for the valid_at date
-            4. If no temporal information is found that establishes or changes the relationship, leave the fields as null.
-            5. Do not infer dates from related events. Only use dates that are directly stated to establish or change the relationship.
-			6. For relative time mentions directly related to the relationship, calculate the actual datetime based on the reference timestamp.
-            7. If only a date is mentioned without a specific time, use 00:00:00 (midnight) for that date.
-            8. If only year is mentioned, use January 1st of that year at 00:00:00.
-            9. Always include the time zone offset (use Z for UTC if no specific time zone is mentioned).
-            10. A fact discussing that something is no longer true should have a valid_at according to when the negated fact became true.
+            指导原则：
+            1. 使用ISO 8601格式（YYYY-MM-DDTHH:MM:SS.SSSSSSZ）表示日期时间。
+            2. 在确定valid_at和invalid_at日期时，使用参考时间戳作为当前时间。
+            3. 如果事实以现在时书写，使用参考时间戳作为valid_at日期
+            4. 如果没有找到建立或改变关系的时间信息，将字段留为null。
+            5. 不要从相关事件推断日期。只使用直接陈述建立或改变关系的日期。
+			6. 对于直接与关系相关的相对时间提及，基于参考时间戳计算实际日期时间。
+            7. 如果只提到日期而没有具体时间，对该日期使用00:00:00（午夜）。
+            8. 如果只提到年份，使用该年的1月1日00:00:00。
+            9. 始终包含时区偏移（如果没有提到具体时区，对UTC使用Z）。
+            10. 讨论某事不再为真的事实应该根据被否定的事实何时成立来设置valid_at。
             """,
         ),
     ]

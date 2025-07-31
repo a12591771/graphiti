@@ -23,17 +23,17 @@ from .models import Message, PromptFunction, PromptVersion
 
 
 class Edge(BaseModel):
-    relation_type: str = Field(..., description='FACT_PREDICATE_IN_SCREAMING_SNAKE_CASE')
-    source_entity_id: int = Field(..., description='The id of the source entity of the fact.')
-    target_entity_id: int = Field(..., description='The id of the target entity of the fact.')
+    relation_type: str = Field(..., description='事实谓词使用大写蛇形命名法（FACT_PREDICATE_IN_SCREAMING_SNAKE_CASE）')
+    source_entity_id: int = Field(..., description='事实的源实体ID。')
+    target_entity_id: int = Field(..., description='事实的目标实体ID。')
     fact: str = Field(..., description='')
     valid_at: str | None = Field(
         None,
-        description='The date and time when the relationship described by the edge fact became true or was established. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS.SSSSSSZ)',
+        description='边事实描述的关系成立或建立的日期和时间。使用ISO 8601格式（YYYY-MM-DDTHH:MM:SS.SSSSSSZ）',
     )
     invalid_at: str | None = Field(
         None,
-        description='The date and time when the relationship described by the edge fact stopped being true or ended. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SS.SSSSSSZ)',
+        description='边事实描述的关系停止为真或结束的日期和时间。使用ISO 8601格式（YYYY-MM-DDTHH:MM:SS.SSSSSSZ）',
     )
 
 
@@ -42,7 +42,7 @@ class ExtractedEdges(BaseModel):
 
 
 class MissingFacts(BaseModel):
-    missing_facts: list[str] = Field(..., description="facts that weren't extracted")
+    missing_facts: list[str] = Field(..., description="未被提取的事实")
 
 
 class Prompt(Protocol):
@@ -61,93 +61,92 @@ def edge(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are an expert fact extractor that extracts fact triples from text. '
-            '1. Extracted fact triples should also be extracted with relevant date information.'
-            '2. Treat the CURRENT TIME as the time the CURRENT MESSAGE was sent. All temporal information should be extracted relative to this time.',
+            content='你是一个从文本中提取事实三元组的专业事实提取器。'
+            '1. 提取的事实三元组还应该提取相关的日期信息。'
+            '2. 将当前时间视为当前消息发送的时间。所有时间信息都应该相对于这个时间提取。',
         ),
         Message(
             role='user',
             content=f"""
-<FACT TYPES>
+<事实类型>
 {context['edge_types']}
-</FACT TYPES>
+</事实类型>
 
-<PREVIOUS_MESSAGES>
+<历史消息>
 {json.dumps([ep for ep in context['previous_episodes']], indent=2)}
-</PREVIOUS_MESSAGES>
+</历史消息>
 
-<CURRENT_MESSAGE>
+<当前消息>
 {context['episode_content']}
-</CURRENT_MESSAGE>
+</当前消息>
 
-<ENTITIES>
+<实体>
 {context['nodes']} 
-</ENTITIES>
+</实体>
 
-<REFERENCE_TIME>
-{context['reference_time']}  # ISO 8601 (UTC); used to resolve relative time mentions
-</REFERENCE_TIME>
+<参考时间>
+{context['reference_time']}  # ISO 8601 (UTC); 用于解析相对时间提及
+</参考时间>
 
-# TASK
-Extract all factual relationships between the given ENTITIES based on the CURRENT MESSAGE.
-Only extract facts that:
-- involve two DISTINCT ENTITIES from the ENTITIES list,
-- are clearly stated or unambiguously implied in the CURRENT MESSAGE,
-    and can be represented as edges in a knowledge graph.
-- The FACT TYPES provide a list of the most important types of facts, make sure to extract facts of these types
-- The FACT TYPES are not an exhaustive list, extract all facts from the message even if they do not fit into one
-    of the FACT TYPES
-- The FACT TYPES each contain their fact_type_signature which represents the source and target entity types.
+# 任务
+基于当前消息提取给定实体之间的所有事实关系。
+只提取满足以下条件的事实：
+- 涉及实体列表中的两个不同实体，
+- 在当前消息中明确陈述或无歧义暗示，
+    并且可以表示为知识图中的边。
+- 事实类型提供了最重要的事实类型列表，确保提取这些类型的事实
+- 事实类型不是详尽的列表，即使不符合事实类型之一，也要提取消息中的所有事实
+- 每个事实类型都包含其fact_type_signature，表示源和目标实体类型。
 
-You may use information from the PREVIOUS MESSAGES only to disambiguate references or support continuity.
+你可以使用历史消息中的信息仅用于消歧引用或支持连续性。
 
 
 {context['custom_prompt']}
 
-# EXTRACTION RULES
+# 提取规则
 
-1. Only emit facts where both the subject and object match IDs in ENTITIES.
-2. Each fact must involve two **distinct** entities.
-3. Use a SCREAMING_SNAKE_CASE string as the `relation_type` (e.g., FOUNDED, WORKS_AT).
-4. Do not emit duplicate or semantically redundant facts.
-5. The `fact_text` should quote or closely paraphrase the original source sentence(s).
-6. Use `REFERENCE_TIME` to resolve vague or relative temporal expressions (e.g., "last week").
-7. Do **not** hallucinate or infer temporal bounds from unrelated events.
+1. 只输出主语和宾语都匹配实体中ID的事实。
+2. 每个事实必须涉及两个**不同的**实体。
+3. 使用大写蛇形命名法字符串作为`relation_type`（例如，FOUNDED、WORKS_AT）。
+4. 不要输出重复或语义冗余的事实。
+5. `fact_text`应该引用或密切释义原始源句子。
+6. 使用`REFERENCE_TIME`来解析模糊或相对的时间表达（例如，"上周"）。
+7. **不要**虚构或从无关事件推断时间边界。
 
-# DATETIME RULES
+# 日期时间规则
 
-- Use ISO 8601 with “Z” suffix (UTC) (e.g., 2025-04-30T00:00:00Z).
-- If the fact is ongoing (present tense), set `valid_at` to REFERENCE_TIME.
-- If a change/termination is expressed, set `invalid_at` to the relevant timestamp.
-- Leave both fields `null` if no explicit or resolvable time is stated.
-- If only a date is mentioned (no time), assume 00:00:00.
-- If only a year is mentioned, use January 1st at 00:00:00.
+- 使用带"Z"后缀的ISO 8601格式（UTC）（例如，2025-04-30T00:00:00Z）。
+- 如果事实是持续进行的（现在时），将`valid_at`设置为REFERENCE_TIME。
+- 如果表达了变化/终止，将`invalid_at`设置为相关时间戳。
+- 如果没有明确或可解析的时间陈述，则将两个字段都留为`null`。
+- 如果只提到日期（没有时间），假设为00:00:00。
+- 如果只提到年份，使用1月1日00:00:00。
         """,
         ),
     ]
 
 
 def reflexion(context: dict[str, Any]) -> list[Message]:
-    sys_prompt = """You are an AI assistant that determines which facts have not been extracted from the given context"""
+    sys_prompt = """你是一个确定给定上下文中哪些事实未被提取的AI助手"""
 
     user_prompt = f"""
-<PREVIOUS MESSAGES>
+<历史消息>
 {json.dumps([ep for ep in context['previous_episodes']], indent=2)}
-</PREVIOUS MESSAGES>
-<CURRENT MESSAGE>
+</历史消息>
+<当前消息>
 {context['episode_content']}
-</CURRENT MESSAGE>
+</当前消息>
 
-<EXTRACTED ENTITIES>
+<已提取实体>
 {context['nodes']}
-</EXTRACTED ENTITIES>
+</已提取实体>
 
-<EXTRACTED FACTS>
+<已提取事实>
 {context['extracted_facts']}
-</EXTRACTED FACTS>
+</已提取事实>
 
-Given the above MESSAGES, list of EXTRACTED ENTITIES entities, and list of EXTRACTED FACTS; 
-determine if any facts haven't been extracted.
+给定上述消息、已提取实体列表和已提取事实列表；
+确定是否有任何事实未被提取。
 """
     return [
         Message(role='system', content=sys_prompt),
@@ -159,29 +158,28 @@ def extract_attributes(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are a helpful assistant that extracts fact properties from the provided text.',
+            content='你是一个有用的助手，从提供的文本中提取事实属性。',
         ),
         Message(
             role='user',
             content=f"""
 
-        <MESSAGE>
+        <消息>
         {json.dumps(context['episode_content'], indent=2)}
-        </MESSAGE>
-        <REFERENCE TIME>
+        </消息>
+        <参考时间>
         {context['reference_time']}
-        </REFERENCE TIME>
+        </参考时间>
 
-        Given the above MESSAGE, its REFERENCE TIME, and the following FACT, update any of its attributes based on the information provided
-        in MESSAGE. Use the provided attribute descriptions to better understand how each attribute should be determined.
+        给定上述消息、其参考时间和以下事实，根据消息中提供的信息更新其任何属性。使用提供的属性描述来更好地理解每个属性应该如何确定。
 
-        Guidelines:
-        1. Do not hallucinate entity property values if they cannot be found in the current context.
-        2. Only use the provided MESSAGES and FACT to set attribute values.
+        指导原则：
+        1. 如果在当前上下文中找不到实体属性值，不要虚构实体属性值。
+        2. 仅使用提供的消息和事实来设置属性值。
 
-        <FACT>
+        <事实>
         {context['fact']}
-        </FACT>
+        </事实>
         """,
         ),
     ]

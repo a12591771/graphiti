@@ -1,1 +1,1 @@
-DO_NOT_ESCAPE_UNICODE = '\nDo not escape unicode characters.\n'
+DO_NOT_ESCAPE_UNICODE = '\n不要转义unicode字符。\n'

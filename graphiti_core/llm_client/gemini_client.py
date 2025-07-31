@@ -219,14 +219,16 @@ class GeminiClient(LLMClient):
         array_match = re.search(r'\]\s*$', raw_output)
         if array_match:
             try:
-                return json.loads(raw_output[: array_match.end()])
+                from .utils import safe_json_loads
+                return safe_json_loads(raw_output[: array_match.end()])
             except Exception:
                 pass
         # Try to salvage a JSON object
         obj_match = re.search(r'\}\s*$', raw_output)
         if obj_match:
             try:
-                return json.loads(raw_output[: obj_match.end()])
+                from .utils import safe_json_loads
+                return safe_json_loads(raw_output[: obj_match.end()])
             except Exception:
                 pass
         return None
@@ -317,7 +319,8 @@ class GeminiClient(LLMClient):
                     if not raw_output:
                         raise ValueError('No response text')
 
-                    validated_model = response_model.model_validate(json.loads(raw_output))
+                    from .utils import safe_json_loads
+                    validated_model = response_model.model_validate(safe_json_loads(raw_output))
 
                     # Return as a dictionary for API consistency
                     return validated_model.model_dump()

@@ -25,18 +25,18 @@ from .models import Message, PromptFunction, PromptVersion
 class EdgeDuplicate(BaseModel):
     duplicate_facts: list[int] = Field(
         ...,
-        description='List of ids of any duplicate facts. If no duplicate facts are found, default to empty list.',
+        description='任何重复事实的ID列表。如果没有找到重复事实，默认为空列表。',
     )
     contradicted_facts: list[int] = Field(
         ...,
-        description='List of ids of facts that should be invalidated. If no facts should be invalidated, the list should be empty.',
+        description='应该被无效化的事实ID列表。如果没有事实应该被无效化，列表应该为空。',
     )
-    fact_type: str = Field(..., description='One of the provided fact types or DEFAULT')
+    fact_type: str = Field(..., description='提供的事实类型之一或DEFAULT')
 
 
 class UniqueFact(BaseModel):
-    uuid: str = Field(..., description='unique identifier of the fact')
-    fact: str = Field(..., description='fact of a unique edge')
+    uuid: str = Field(..., description='事实的唯一标识符')
+    fact: str = Field(..., description='唯一边的事实')
 
 
 class UniqueFacts(BaseModel):
@@ -59,28 +59,27 @@ def edge(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are a helpful assistant that de-duplicates edges from edge lists.',
+            content='你是一个有用的助手，从边列表中去重边。',
         ),
         Message(
             role='user',
             content=f"""
-        Given the following context, determine whether the New Edge represents any of the edges in the list of Existing Edges.
+        给定以下上下文，确定新边是否代表现有边列表中的任何边。
 
-        <EXISTING EDGES>
+        <现有边>
         {json.dumps(context['related_edges'], indent=2)}
-        </EXISTING EDGES>
+        </现有边>
 
-        <NEW EDGE>
+        <新边>
         {json.dumps(context['extracted_edges'], indent=2)}
-        </NEW EDGE>
+        </新边>
         
-        Task:
-        If the New Edges represents the same factual information as any edge in Existing Edges, return the id of the duplicate fact
-            as part of the list of duplicate_facts.
-        If the NEW EDGE is not a duplicate of any of the EXISTING EDGES, return an empty list.
+        任务：
+        如果新边代表与现有边中任何边相同的事实信息，将重复事实的ID作为duplicate_facts列表的一部分返回。
+        如果新边不是任何现有边的重复，返回空列表。
 
-        Guidelines:
-        1. The facts do not need to be completely identical to be duplicates, they just need to express the same information.
+        指导原则：
+        1. 事实不需要完全相同就是重复，它们只需要表达相同的信息。
         """,
         ),
     ]
@@ -90,25 +89,24 @@ def edge_list(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are a helpful assistant that de-duplicates edges from edge lists.',
+            content='你是一个有用的助手，从边列表中去重边。',
         ),
         Message(
             role='user',
             content=f"""
-        Given the following context, find all of the duplicates in a list of facts:
+        给定以下上下文，在事实列表中找到所有重复项：
 
-        Facts:
+        事实：
         {json.dumps(context['edges'], indent=2)}
 
-        Task:
-        If any facts in Facts is a duplicate of another fact, return a new fact with one of their uuid's.
+        任务：
+        如果事实中的任何事实是另一个事实的重复，返回一个带有其中一个uuid的新事实。
 
-        Guidelines:
-        1. identical or near identical facts are duplicates
-        2. Facts are also duplicates if they are represented by similar sentences
-        3. Facts will often discuss the same or similar relation between identical entities
-        4. The final list should have only unique facts. If 3 facts are all duplicates of each other, only one of their
-            facts should be in the response
+        指导原则：
+        1. 相同或近似相同的事实是重复的
+        2. 如果事实由相似的句子表示，它们也是重复的
+        3. 事实通常会讨论相同实体之间的相同或相似关系
+        4. 最终列表应该只有唯一的事实。如果3个事实都是彼此的重复，响应中应该只有其中一个事实
         """,
         ),
     ]
@@ -118,43 +116,42 @@ def resolve_edge(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='You are a helpful assistant that de-duplicates facts from fact lists and determines which existing '
-            'facts are contradicted by the new fact.',
+            content='你是一个有用的助手，从事实列表中去重事实并确定新事实与哪些现有事实矛盾。',
         ),
         Message(
             role='user',
             content=f"""
-        <NEW FACT>
+        <新事实>
         {context['new_edge']}
-        </NEW FACT>
+        </新事实>
         
-        <EXISTING FACTS>
+        <现有事实>
         {context['existing_edges']}
-        </EXISTING FACTS>
-        <FACT INVALIDATION CANDIDATES>
+        </现有事实>
+        <事实无效化候选>
         {context['edge_invalidation_candidates']}
-        </FACT INVALIDATION CANDIDATES>
+        </事实无效化候选>
         
-        <FACT TYPES>
+        <事实类型>
         {context['edge_types']}
-        </FACT TYPES>
+        </事实类型>
         
 
-        Task:
-        If the NEW FACT represents identical factual information of one or more in EXISTING FACTS, return the idx of the duplicate facts.
-        Facts with similar information that contain key differences should not be marked as duplicates.
-        If the NEW FACT is not a duplicate of any of the EXISTING FACTS, return an empty list.
+        任务：
+        如果新事实代表现有事实中一个或多个的相同事实信息，返回重复事实的idx。
+        包含关键差异的相似信息的事实不应该被标记为重复。
+        如果新事实不是任何现有事实的重复，返回空列表。
         
-        Given the predefined FACT TYPES, determine if the NEW FACT should be classified as one of these types.
-        Return the fact type as fact_type or DEFAULT if NEW FACT is not one of the FACT TYPES.
+        给定预定义的事实类型，确定新事实是否应该被分类为这些类型之一。
+        返回事实类型作为fact_type，如果新事实不是事实类型之一，则返回DEFAULT。
         
-        Based on the provided FACT INVALIDATION CANDIDATES and NEW FACT, determine which existing facts the new fact contradicts.
-        Return a list containing all idx's of the facts that are contradicted by the NEW FACT.
-        If there are no contradicted facts, return an empty list.
+        基于提供的事实无效化候选和新事实，确定新事实与哪些现有事实矛盾。
+        返回包含新事实矛盾的所有事实idx的列表。
+        如果没有矛盾的事实，返回空列表。
 
-        Guidelines:
-        1. Some facts may be very similar but will have key differences, particularly around numeric values in the facts.
-            Do not mark these facts as duplicates.
+        指导原则：
+        1. 一些事实可能非常相似，但会有关键差异，特别是围绕事实中的数值。
+            不要将这些事实标记为重复。
         """,
         ),
     ]

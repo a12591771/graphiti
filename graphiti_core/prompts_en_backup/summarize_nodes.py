@@ -25,12 +25,12 @@ from .models import Message, PromptFunction, PromptVersion
 class Summary(BaseModel):
     summary: str = Field(
         ...,
-        description='包含实体重要信息的摘要。少于250字',
+        description='Summary containing the important information about the entity. Under 250 words',
     )
 
 
 class SummaryDescription(BaseModel):
-    description: str = Field(..., description='提供摘要的单句描述')
+    description: str = Field(..., description='One sentence description of the provided summary')
 
 
 class Prompt(Protocol):
@@ -49,16 +49,16 @@ def summarize_pair(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='你是一个有用的助手，合并摘要。',
+            content='You are a helpful assistant that combines summaries.',
         ),
         Message(
             role='user',
             content=f"""
-        将以下两个摘要的信息合成为一个简洁的摘要。
+        Synthesize the information from the following two summaries into a single succinct summary.
         
-        摘要必须少于250字。
+        Summaries must be under 250 words.
 
-        摘要：
+        Summaries:
         {json.dumps(context['node_summaries'], indent=2)}
         """,
         ),
@@ -69,38 +69,39 @@ def summarize_context(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='你是一个有用的助手，从提供的文本中提取实体属性。',
+            content='You are a helpful assistant that extracts entity properties from the provided text.',
         ),
         Message(
             role='user',
             content=f"""
             
-        <消息>
+        <MESSAGES>
         {json.dumps(context['previous_episodes'], indent=2)}
         {json.dumps(context['episode_content'], indent=2)}
-        </消息>
+        </MESSAGES>
         
-        根据上述消息和以下实体名称，为该实体创建摘要。你的摘要必须仅使用
-        提供的消息中的信息。你的摘要也应该仅包含与
-        提供的实体相关的信息。摘要必须少于250字。
+        Given the above MESSAGES and the following ENTITY name, create a summary for the ENTITY. Your summary must only use
+        information from the provided MESSAGES. Your summary should also only contain information relevant to the
+        provided ENTITY. Summaries must be under 250 words.
         
-        此外，根据提供的实体属性描述提取任何值。
-        如果在当前上下文中找不到实体属性的值，请将该属性的值设置为Python值None。
+        In addition, extract any values for the provided entity properties based on their descriptions.
+        If the value of the entity property cannot be found in the current context, set the value of the property to the Python value None.
         
-        指导原则：
-        1. 如果在当前上下文中找不到实体属性值，请不要虚构实体属性值。
-        2. 仅使用提供的消息、实体和实体上下文来设置属性值。
-        <实体>
+        Guidelines:
+        1. Do not hallucinate entity property values if they cannot be found in the current context.
+        2. Only use the provided messages, entity, and entity context to set attribute values.
+        
+        <ENTITY>
         {context['node_name']}
-        </实体>
+        </ENTITY>
         
-        <实体上下文>
+        <ENTITY CONTEXT>
         {context['node_summary']}
-        </实体上下文>
+        </ENTITY CONTEXT>
         
-        <属性>
+        <ATTRIBUTES>
         {json.dumps(context['attributes'], indent=2)}
-        </属性>
+        </ATTRIBUTES>
         """,
         ),
     ]
@@ -110,15 +111,15 @@ def summary_description(context: dict[str, Any]) -> list[Message]:
     return [
         Message(
             role='system',
-            content='你是一个有用的助手，用一句话描述提供的内容。',
+            content='You are a helpful assistant that describes provided contents in a single sentence.',
         ),
         Message(
             role='user',
             content=f"""
-        创建摘要的简短单句描述，解释总结了什么样的信息。
-        摘要必须少于250字。
+        Create a short one sentence description of the summary that explains what kind of information is summarized.
+        Summaries must be under 250 words.
 
-        摘要：
+        Summary:
         {json.dumps(context['summary'], indent=2)}
         """,
         ),
