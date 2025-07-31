@@ -80,17 +80,16 @@ def summarize_context(context: dict[str, Any]) -> list[Message]:
         {json.dumps(context['episode_content'], indent=2)}
         </MESSAGES>
         
-        Given the above MESSAGES and the following ENTITY name, create a summary for the ENTITY. Your summary must only use
-        information from the provided MESSAGES. Your summary should also only contain information relevant to the
-        provided ENTITY. Summaries must be under 250 words.
+        根据上述 MESSAGES 和以下 ENTITY 名称，为该 ENTITY 创建摘要。你的摘要必须仅使用
+        提供的 MESSAGES 中的信息。你的摘要也应该仅包含与
+        提供的 ENTITY 相关的信息。摘要必须少于 250 个字。
         
-        In addition, extract any values for the provided entity properties based on their descriptions.
-        If the value of the entity property cannot be found in the current context, set the value of the property to the Python value None.
+        此外，根据提供的实体属性描述提取任何值。
+        如果在当前上下文中找不到实体属性的值，请将该属性的值设置为 Python 值 None。
         
-        Guidelines:
-        1. Do not hallucinate entity property values if they cannot be found in the current context.
-        2. Only use the provided messages, entity, and entity context to set attribute values.
-        
+        指导原则：
+        1. 如果在当前上下文中找不到实体属性值，请不要虚构实体属性值。
+        2. 仅使用提供的消息、实体和实体上下文来设置属性值。
         <ENTITY>
         {context['node_name']}
         </ENTITY>

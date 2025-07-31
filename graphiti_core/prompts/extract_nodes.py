@@ -87,29 +87,28 @@ def extract_message(context: dict[str, Any]) -> list[Message]:
 {context['episode_content']}
 </CURRENT MESSAGE>
 
-Instructions:
+指令:
 
-You are given a conversation context and a CURRENT MESSAGE. Your task is to extract **entity nodes** mentioned **explicitly or implicitly** in the CURRENT MESSAGE.
-Pronoun references such as he/she/they or this/that/those should be disambiguated to the names of the 
-reference entities.
+给定对话上下文和当前消息，你的任务是提取当前消息中**显式或隐式**提及的**实体节点**。
+代词引用如he/she/they或this/that/those应该被消歧到引用实体的名称。
 
-1. **Speaker Extraction**: Always extract the speaker (the part before the colon `:` in each dialogue line) as the first entity node.
-   - If the speaker is mentioned again in the message, treat both mentions as a **single entity**.
+1. **说话者提取**: 始终提取说话者（每个对话行中冒号 `:` 前面的部分）作为第一个实体节点。
+   - 如果说话者在消息中再次被提及，将两次提及视为**单个实体**。
 
-2. **Entity Identification**:
-   - Extract all significant entities, concepts, or actors that are **explicitly or implicitly** mentioned in the CURRENT MESSAGE.
-   - **Exclude** entities mentioned only in the PREVIOUS MESSAGES (they are for context only).
+2. **实体识别**:
+   - 提取当前消息中**显式或隐式**提及的所有重要实体、概念或参与者。
+   - **排除**仅在之前消息中提及的实体（它们仅用于上下文）。
 
-3. **Entity Classification**:
-   - Use the descriptions in ENTITY TYPES to classify each extracted entity.
-   - Assign the appropriate `entity_type_id` for each one.
+3. **实体分类**:
+   - 使用实体类型中的描述来分类每个提取的实体。
+   - 为每个实体分配适当的 `entity_type_id`。
 
-4. **Exclusions**:
-   - Do NOT extract entities representing relationships or actions.
-   - Do NOT extract dates, times, or other temporal information—these will be handled separately.
+4. **排除项**:
+   - 不要提取表示关系或行为的实体。
+   - 不要提取日期、时间或其他时间信息——这些将单独处理。
 
-5. **Formatting**:
-   - Be **explicit and unambiguous** in naming entities (e.g., use full names when available).
+5. **格式化**:
+   - 在命名实体时要**明确且无歧义**（例如，在可用时使用全名）。
 
 {context['custom_prompt']}
 """
