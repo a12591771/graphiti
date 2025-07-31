@@ -33,7 +33,7 @@ DEFAULT_TEMPERATURE = 0
 DEFAULT_CACHE_DIR = './llm_cache'
 
 MULTILINGUAL_EXTRACTION_RESPONSES = (
-    '\n\n提取的任何信息都应该以与写入时相同的语言返回,不需要使用任何markdown格式。'
+    '\n\n重要格式要求：提取的任何信息都应该以与写入时相同的语言返回。必须返回纯JSON格式，严禁使用```json代码块包装或任何markdown格式。直接输出有效的JSON对象。'
 )
 
 logger = logging.getLogger(__name__)

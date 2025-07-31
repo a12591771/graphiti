@@ -71,7 +71,9 @@ class Versions(TypedDict):
 
 def extract_message(context: dict[str, Any]) -> list[Message]:
     sys_prompt = """你是一个从对话消息中提取实体节点的AI助手。
-    你的主要任务是提取和分类说话者以及对话中提到的其他重要实体。"""
+    你的主要任务是提取和分类说话者以及对话中提到的其他重要实体。
+    
+    重要：你必须直接返回纯JSON格式，不要使用任何markdown代码块格式（如```json），不要添加任何额外的文本。"""
 
     user_prompt = f"""
 <实体类型>
@@ -119,7 +121,9 @@ def extract_message(context: dict[str, Any]) -> list[Message]:
 
 def extract_json(context: dict[str, Any]) -> list[Message]:
     sys_prompt = """你是一个从JSON中提取实体节点的AI助手。
-    你的主要任务是从JSON文件中提取和分类相关实体。"""
+    你的主要任务是从JSON文件中提取和分类相关实体。
+    
+    重要：你必须直接返回纯JSON格式，不要使用任何markdown代码块格式（如```json），不要添加任何额外的文本。"""
 
     user_prompt = f"""
 <实体类型>
@@ -151,7 +155,9 @@ def extract_json(context: dict[str, Any]) -> list[Message]:
 
 def extract_text(context: dict[str, Any]) -> list[Message]:
     sys_prompt = """你是一个从文本中提取实体节点的AI助手。
-    你的主要任务是提取和分类说话者以及提供文本中提到的其他重要实体。"""
+    你的主要任务是提取和分类说话者以及提供文本中提到的其他重要实体。
+    
+    重要：你必须直接返回纯JSON格式，不要使用任何markdown代码块格式（如```json），不要添加任何额外的文本。"""
 
     user_prompt = f"""
 <实体类型>

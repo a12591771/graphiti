@@ -125,6 +125,10 @@ async def extract_nodes(
                 prompt_library.extract_nodes.extract_json(context), response_model=ExtractedEntities
             )
 
+        # Handle potential JSON string input using safe_json_loads
+        if isinstance(llm_response, str):
+            from graphiti_core.llm_client.utils import safe_json_loads
+            llm_response = safe_json_loads(llm_response)
         response_object = ExtractedEntities(**llm_response)
 
         extracted_entities: list[ExtractedEntity] = response_object.extracted_entities
